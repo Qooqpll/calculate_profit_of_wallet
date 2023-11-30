@@ -77,54 +77,41 @@ func main() {
 	var tokenPrices []byte
 	var n0, n1 int
 	length := len(tokens)
-
+	// TODO нужно придумать как получить все прайсы по транзакциям, возможно придёться задействовать кэша redis или базу
 	for i := 0; i < length; i += 25 {
 		n1 = n0 + 25
 		if n1 > length {
 			n1 = length
 		}
 
-		req := request.GetTokenPrices(tokens[n0:n1])
-		if i > 0 {
-			// Add a comma between JSON arrays except for the first one
-			tokenPrices = append(tokenPrices, ',')
-		}
-		tokenPrices = append(tokenPrices, req...)
-		n0 = n1
+		tokenPrices = request.GetTokenPrices(tokens[n0:n1])
 	}
 
-	// Wrap the combined JSON arrays with square brackets to form a valid JSON array
-	tokenPrices = append([]byte{'['}, append(tokenPrices, ']')...)
-
-	fmt.Println(string(tokenPrices))
-
-	var infoTokens [][]request.Token
+	var infoTokens []request.Token
 	err = json.Unmarshal(tokenPrices, &infoTokens)
 	if err != nil {
 		fmt.Println("Error unmarshalling JSON:", err)
 	} else {
 		fmt.Println("Number of tokens:", len(infoTokens))
 	}
-	fmt.Println("==================")
-	fmt.Println(infoTokens)
-	fmt.Println("==================")
+
 	var result = make(map[string]float64)
 
 	for _, transaction := range transfers {
-		for i, token := range infoTokens {
-			if transaction.BlockNumber == token[i].ToBlock && transaction.TokenAddress == token[i].TokenAddress {
+		for _, token := range infoTokens {
+			if transaction.BlockNumber == token.ToBlock && transaction.TokenAddress == token.TokenAddress {
 				if transaction.ToAddress == CurrentAddress {
 					// Buy
 					if _, ok := result[transaction.TokenAddress]; !ok {
 						result[transaction.TokenAddress] = float64(0)
 					}
-					result[transaction.TokenAddress] -= transaction.CalculateTokenPrice(token[i].UsdPriceFormatted, token[i].TokenDecimals)
+					result[transaction.TokenAddress] -= transaction.CalculateTokenPrice(token.UsdPriceFormatted, token.TokenDecimals)
 				} else if transaction.FromAddress == CurrentAddress {
 					// Sell
 					if _, ok := result[transaction.TokenAddress]; !ok {
 						result[transaction.TokenAddress] = float64(0)
 					}
-					result[transaction.TokenAddress] += transaction.CalculateTokenPrice(token[i].UsdPriceFormatted, token[i].TokenDecimals)
+					result[transaction.TokenAddress] += transaction.CalculateTokenPrice(token.UsdPriceFormatted, token.TokenDecimals)
 				}
 			}
 		}
