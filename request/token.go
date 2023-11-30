@@ -5,10 +5,6 @@ import (
 	"net/http"
 )
 
-type Tokens struct {
-	Tokens []Token
-}
-
 type Token struct {
 	TokenName         string      `json:"tokenName"`
 	TokenDecimals     string      `json:"tokenDecimals"`
